@@ -320,7 +320,7 @@ function App() {
     this.image.newWidth = newWidth;
     this.image.newHeight = newHeight;
     this.image.display();
-    this.socket.emit('history:fetch');
+    // this.socket.emit('history:fetch');
   }
   this.handleKeysDownMouseEvent = (e) => {
     if (this.keysDown.includes(91)) {
