@@ -3,12 +3,16 @@ extends layout
 block stylesheets
 
 block content
-  .container
-    include partials/upload
-    include partials/lineWidths
-    include partials/buttons
-    include partials/colors
-    include partials/chat
+  include partials/upload
+  .main-container
+    .draw-container
+    .chat-container
+  footer
+    button.participants
+      span#numUsers 0
+      | &nbsp;🤖
+    button#chatToggle.disabled(disabled)
+    button#download Save
+    button#upload Upload
 block scripts
-  // script(src='/socket.io/socket.io.js')
   script(src='/js/bundle.js')

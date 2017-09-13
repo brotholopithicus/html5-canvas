@@ -9,9 +9,8 @@ function App() {
     this.socket = io();
     this.addSocketListeners();
     this.createCanvas(element);
-    this.chatSetup();
+    // this.chatSetup();
     this.connections = document.querySelector('#connections');
-    window.addEventListener('resize', this.onResize);
   }
   this.fetchImage = (id) => {
     const image = new Image();
@@ -187,13 +186,15 @@ function App() {
     this.socket.on('image:update', ({ image }) => this.handleImageUpdate(image));
   }
   this.handleNewSocketConn = (connections) => {
-    this.connections.textContent = `${connections} `;
+    // this.connections.textContent = `${connections} `;
+    console.log(connections);
   }
   this.handleLocalEvents = (e) => {
     if (this.keysDown.length) {
       this.handleKeysDownMouseEvent(e);
     } else {
-      this.handleDrawEvent(e.offsetX, e.offsetY, this.ctx.strokeStyle, this.ctx.lineWidth, e.type, false);
+      const { x, y } = getMousePos(this.canvas, e);
+      this.handleDrawEvent(x, y, this.ctx.strokeStyle, this.ctx.lineWidth, e.type, false);
     }
   }
   this.handleImageUpdate = ({ x, y, newWidth, newHeight }) => {
@@ -301,11 +302,6 @@ function App() {
     this.ctx.lineTo(x, y);
     this.ctx.stroke();
     [this.lastX, this.lastY] = [x, y];
-  }
-  this.onResize = () => {
-    this.canvas.width = window.innerWidth;
-    this.canvas.height = window.innerHeight * 0.7;
-    this.setStyles();
   }
   this.clearCanvas = () => {
     this.socket.emit('clearCanvas');

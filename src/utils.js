@@ -3,11 +3,15 @@ function getMousePos(canvas, e) {
   const scaleX = canvas.width / rect.width;
   const scaleY = canvas.height / rect.height;
   return {
-    x: parseInt(e.clientX - scaleX),
-    y: parseInt(e.clientY - scaleY)
+    x: (e.clientX - rect.left) * scaleX,
+    y: (e.clientY - rect.top) * scaleY
   }
 }
 
+function createKeyboardEvent(keyCode) {
+  return new KeyboardEvent('keydown', { keyCode });
+}
 module.exports = {
-  getMousePos
+  getMousePos,
+  createKeyboardEvent
 }

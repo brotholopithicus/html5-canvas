@@ -17,34 +17,74 @@ const server = http.createServer(app);
 
 /* Attach socket.io to server. */
 
-let connections = 0;
 const io = require('socket.io')(server);
+
+let canvasHistory = [];
+let chatHistory = [];
+let numUsers = 0;
+
 io.on('connection', (socket) => {
-  connections++;
-  console.log(`socket connected!\ntotal: ${connections}`);
-  io.emit('newConnection', connections);
-  socket.on('drawEvent', (data) => {
-    socket.broadcast.emit('draw', data);
+
+  // canvas
+  socket.on('resize', () => {
+    socket.emit('history', canvasHistory);
   });
-  socket.on('clearCanvas', () => {
-    console.log('clear canvas!');
-    io.emit('clearCanvas');
+
+  socket.on('drawing', (data) => {
+    socket.broadcast.emit('drawing', data);
+    canvasHistory.push(data);
   });
-  socket.on('chat message', (msg) => {
-    console.log('chat message: ', msg);
-    io.emit('chat message', msg);
+
+  socket.on('clear', () => {
+    io.emit('clear');
   });
-  socket.on('disconnect', () => {
-    connections--;
-    io.emit('newConnection', connections);
-    console.log(`socket disconnected!\ntotal: ${connections}`);
+
+  socket.on('history:fetch', () => {
+    socket.emit('history', canvasHistory);
   });
+
+  socket.on('history:clear', () => {
+    canvasHistory = [];
+    io.emit('clear:history');
+  });
+
   socket.on('image:fetch', ({ id }) => {
-    console.log(`image:fetch ${id}`);
     io.emit('image:fetch', ({ id }));
   });
+
   socket.on('image:update', ({ image }) => {
     io.emit('image:update', { image });
+  });
+
+  // chat
+  socket.on('new message', (data) => {
+    const msgData = { username: socket.username, message: data };
+    socket.broadcast.emit('new message', msgData);
+    chatHistory.push(msgData);
+  });
+
+  socket.on('add user', (username) => {
+    numUsers++;
+    socket.username = username;
+    socket.emit('login', { numUsers });
+    socket.broadcast.emit('user joined', { username, numUsers });
+  });
+
+  socket.on('chatHistory', (data) => {
+    if (chatHistory.length > 10) {
+      chatHistory = chatHistory.slice(chatHistory.length - 10, chatHistory.length);
+    }
+    socket.emit('chatHistory', chatHistory);
+  });
+
+  socket.on('disconnect', () => {
+    if (socket.username) {
+      numUsers--;
+      socket.broadcast.emit('user left', {
+        username: socket.username,
+        numUsers
+      });
+    }
   });
 });
 
