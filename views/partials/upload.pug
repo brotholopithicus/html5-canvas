@@ -1,0 +1,6 @@
+.upload-container.hidden
+  .upload-wrapper
+    button#cancel-upload &times;
+    form#upload-form(name='upload-form', action='/api/image', enctype='multipart/form-data', method='POST')
+      input#image(type='file', name='image')
+      input#upload(type='submit', value='Submit')

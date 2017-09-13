@@ -1,0 +1,14 @@
+extends layout
+
+block stylesheets
+
+block content
+  .container
+    include partials/upload
+    include partials/lineWidths
+    include partials/buttons
+    include partials/colors
+    include partials/chat
+block scripts
+  // script(src='/socket.io/socket.io.js')
+  script(src='/js/bundle.js')
