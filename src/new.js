@@ -139,12 +139,14 @@ function App() {
     this.lineWidthDisplay.style.height = size + 'px';
     this.current.size = size;
   }
-  this.clearCanvas = () => {
-    this.socket.emit('clear');
+  this.clearCanvas = (emit = false) => {
+    this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+    if (emit) {
+      this.socket.emit('clear');
+    }
   }
   this.clearEventHandler = (e) => {
-    this.socket.emit('history:clear');
-    this.clearCanvas();
+    this.clearCanvas(true);
   }
   this.onCanvasHistory = (history) => {
     history.forEach(item => {
@@ -273,7 +275,6 @@ function App() {
     this.socket.emit('image:display', ({ image: this.image }));
   }
   this.handleKeyEvents = (e) => {
-    if (e.target.tagName === 'INPUT') return;
     if (e.type === 'keydown') {
       if (!this.keysDown.includes(e.keyCode)) this.keysDown.push(e.keyCode);
     } else if (e.type === 'keyup') {
@@ -319,6 +320,7 @@ function App() {
     this.image.y = y;
     this.image.newWidth = newWidth;
     this.image.newHeight = newHeight;
+    this.clearCanvas();
     this.image.display();
     // this.socket.emit('history:fetch');
   }
@@ -355,21 +357,6 @@ function App() {
     const dHeight = y - this.resizeStart.y;
     this.image.updateImageSize(dWidth, dHeight);
     this.resizeStart = { x, y };
-    this.clearCanvas();
-    const updated = {
-      x: this.image.x,
-      y: this.image.y,
-      newWidth: this.image.newWidth,
-      newHeight: this.image.newHeight
-    };
-    this.socket.emit('image:update', { image: updated })
-  }
-  this.handleImageMove = (x, y) => {
-    const newX = x - this.moveStart.x;
-    const newY = y - this.moveStart.y;
-    this.image.updateImagePosition(newX, newY);
-    this.moveStart = { x, y };
-    this.clearCanvas();
     const updated = {
       x: this.image.x,
       y: this.image.y,
@@ -377,6 +364,21 @@ function App() {
       newHeight: this.image.newHeight
     };
     this.socket.emit('image:update', { image: updated });
+    this.handleImageUpdate(updated);
+  }
+  this.handleImageMove = (x, y) => {
+    const newX = x - this.moveStart.x;
+    const newY = y - this.moveStart.y;
+    this.image.updateImagePosition(newX, newY);
+    this.moveStart = { x, y };
+    const updated = {
+      x: this.image.x,
+      y: this.image.y,
+      newWidth: this.image.newWidth,
+      newHeight: this.image.newHeight
+    };
+    this.socket.emit('image:update', { image: updated });
+    this.handleImageUpdate(updated);
   }
   this.getCanvasDimensions = () => ({ w: this.canvas.width, h: this.canvas.height })
 }

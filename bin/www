@@ -36,6 +36,8 @@ io.on('connection', (socket) => {
   });
 
   socket.on('clear', () => {
+    canvasHistory = [];
+    console.log('clear!');
     io.emit('clear');
   });
 
@@ -49,11 +51,11 @@ io.on('connection', (socket) => {
   });
 
   socket.on('image:fetch', ({ id }) => {
-    io.emit('image:fetch', ({ id }));
+    socket.broadcast.emit('image:fetch', ({ id }));
   });
 
   socket.on('image:update', ({ image }) => {
-    io.emit('image:update', { image });
+    socket.broadcast.emit('image:update', { image });
   });
 
   // chat
