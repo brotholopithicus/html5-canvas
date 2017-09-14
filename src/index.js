@@ -1,3 +1,5 @@
+require('./css/combo.css');
+
 const App = require('./new');
 const Chat = require('./chat');
 
