@@ -1,42 +1,48 @@
 class CanvasImage {
-  constructor(source, ctx) {
+  constructor(source, ctx, id) {
     this.source = source;
     this.ctx = ctx;
+    this.id = id;
+    this.anchorRadius = 8;
+    this.selected = false;
     this.initialize();
   }
   initialize() {
     this.image = new Image();
-    this.image.onload = (e) => this.setProps(e.target);
+    this.image.addEventListener('load', this.imageLoadEvtListener.bind(this))
     this.image.src = URL.createObjectURL(this.source);
   }
   display() {
-    this.ctx.drawImage(this.image, 0, 0, this.width, this.height, this.x, this.y, this.newWidth, this.newHeight);
+    this.ctx.drawImage(this.image, 0, 0, this.image.width, this.image.height, this.x, this.y, this.width, this.height);
+    if (this.selected) {
+      this.ctx.strokeStyle = '#ff7300';
+      this.ctx.lineWidth = 2;
+      this.ctx.strokeRect(this.x, this.y, this.width, this.height);
+      this.drawAnchors();
+    }
   }
-  drawAnchors(r = 6) {
+  imageLoadEvtListener(e) {
+    this.setProps(e.target);
+    this.image.removeEventListener('load', this.imageLoadEvtListener);
+  }
+  get anchors() {
     const [x1, y1, x2, y2] = [this.x, this.y, this.x + this.width, this.y + this.height];
-    const anchors = [
+    return [
       { x: x1, y: y1 },
       { x: x1, y: y2 },
-      { x: x2, y: y2 },
+      { x: x2, y: y1 },
       { x: x2, y: y2 }
-    ];
-    anchors.forEach(({ x, y }) => {
+    ]
+  }
+  drawAnchors() {
+    this.anchors.forEach(({ x, y }) => {
+      this.ctx.save();
+      this.ctx.fillStyle = '#ff7300';
       this.ctx.beginPath();
-      this.ctx.arc(x, y, r, 0, 2 * Math.PI, false);
-      this.ctx.fillStyle = 'green';
+      this.ctx.arc(x, y, this.anchorRadius, 0, 2 * Math.PI, false);
       this.ctx.fill();
+      this.ctx.restore();
     });
-  }
-  updateImageSize(dWidth, dHeight) {
-    this.updateProps({ newWidth: this.newWidth + dWidth, newHeight: this.newHeight + dHeight });
-  }
-  updateImagePosition(dx, dy) {
-    this.updateProps({ x: this.x + dx, y: this.y + dy });
-  }
-  updateProps(props) {
-    for (let key in props) {
-      this[key] = props[key];
-    }
   }
   setProps(target) {
     const { width, height, x, y } = target;
@@ -44,15 +50,6 @@ class CanvasImage {
     this.y = y;
     this.width = width;
     this.height = height;
-    this.newWidth = width;
-    this.newHeight = height;
-  }
-  getTopLeftOffset(mouseX, mouseY) {
-    const { x, y } = this;
-    return {
-      x: mouseX - x,
-      y: mouseY - y
-    }
   }
 }
 

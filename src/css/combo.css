@@ -136,6 +136,14 @@ input.line-width {
   transform: scaleY(2);
 }
 
+button#move {
+  background-color: #292929;
+}
+
+button#move.active {
+  background-color: #403030;
+}
+
 button#download {
   border-right: 1px solid #373737;
 }
@@ -371,7 +379,7 @@ input[type=range]::-webkit-slider-thumb {
   margin-top: -8px;
 }
 
-.upload-container {
+.upload-container, .webcam-container {
   display: flex;
   position: absolute;
   width: 100vw;
@@ -383,11 +391,29 @@ input[type=range]::-webkit-slider-thumb {
   background-color: rgba(0, 0, 0, 0.7);
 }
 
-.upload-wrapper {
+.upload-wrapper, .webcam-wrapper {
   position: relative;
   background-color: #ccc;
   padding: 2rem 3rem;
   border-radius: 0.3rem;
+}
+
+.webcam-container-buttons {
+  margin-top: 1rem;
+  display: flex;
+  flex-direction: row;
+}
+
+.webcam-container-buttons button {
+  flex: 1;
+}
+
+.webcam-wrapper {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 1rem;
 }
 
 .upload-wrapper button {

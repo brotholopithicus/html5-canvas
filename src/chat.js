@@ -1,5 +1,5 @@
 const io = require('socket.io-client');
-const { createKeyboardEvent } = require('./utils');
+const { createKeyboardEvent, createElement } = require('./utils');
 
 function Chat() {
   this.config = {
@@ -66,15 +66,15 @@ function Chat() {
     }
   }
   this.createDOM = () => {
-    const pages = this.createElement('ul', { classes: ['pages'] });
-    const chatPage = this.createElement('li', { classes: ['chat', 'page'] });
-    const chatArea = this.createElement('div', { classes: ['chatArea'] });
-    const messages = this.createElement('ul', { classes: ['messages'] });
-    const messageInput = this.createElement('input', { classes: ['messageInput'] });
-    const loginPage = this.createElement('li', { classes: ['login', 'page'] });
-    const form = this.createElement('div', { classes: ['form'] });
-    const title = this.createElement('h3', { classes: ['title'], text: `Enter Your Username` });
-    const usernameInput = this.createElement('input', { classes: ['usernameInput'], attribs: [{ name: 'type', value: 'text' }, { name: 'maxLength', value: '14' }] });
+    const pages = createElement('ul', { classes: ['pages'] });
+    const chatPage = createElement('li', { classes: ['chat', 'page'] });
+    const chatArea = createElement('div', { classes: ['chatArea'] });
+    const messages = createElement('ul', { classes: ['messages'] });
+    const messageInput = createElement('input', { classes: ['messageInput'] });
+    const loginPage = createElement('li', { classes: ['login', 'page'] });
+    const form = createElement('div', { classes: ['form'] });
+    const title = createElement('h3', { classes: ['title'], text: `Enter Your Username` });
+    const usernameInput = createElement('input', { classes: ['usernameInput'], attribs: [{ name: 'type', value: 'text' }, { name: 'maxLength', value: '14' }] });
 
     chatArea.appendChild(messages);
     chatPage.appendChild(chatArea);
@@ -87,21 +87,6 @@ function Chat() {
     pages.appendChild(loginPage);
 
     return pages;
-  }
-  this.createElement = (tag, options) => {
-    const el = document.createElement(tag);
-    if (options.classes) {
-      options.classes.forEach(className => el.classList.add(className));
-    }
-    if (options.attribs) {
-      options.attribs.forEach(attrib => {
-        el.setAttribute(attrib.name, attrib.value);
-      });
-    }
-    if (options.text) {
-      el.textContent = options.text;
-    }
-    return el;
   }
   this.log = (msg, opts) => {
     const el = document.createElement('li');
