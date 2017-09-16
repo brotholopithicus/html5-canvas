@@ -4,11 +4,12 @@ const router = require('express').Router();
 const multer = require('multer');
 
 const { DB_NAME, COLLECTION_NAME, db, UPLOAD_PATH } = require('../config');
-const { loadCollection, filter } = require('../utils');
+const { loadCollection, filter, generateUUID } = require('../utils');
 
 
 const upload = multer({ dest: `${UPLOAD_PATH}/`, fileFilter: filter.images });
 
+// post a single image
 router.post('/image', upload.single('image'), async(req, res) => {
   try {
     const collection = await loadCollection(COLLECTION_NAME, db);
@@ -16,6 +17,7 @@ router.post('/image', upload.single('image'), async(req, res) => {
     db.saveDatabase();
     return res.json({
       id: data.$loki,
+      uuid: generateUUID(),
       fileName: data.filename,
       originalName: data.originalname
     });

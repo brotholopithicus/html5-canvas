@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-const { cleanDirectory } = require('../utils');
+const { cleanDirectory, generateUUID } = require('../utils');
 const { UPLOAD_PATH } = require('../config');
 
 cleanDirectory(UPLOAD_PATH);

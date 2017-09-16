@@ -7,7 +7,7 @@ const colors = require('./colors');
 
 function App() {
   this.config = {
-    colors: colors[2]
+    colors: colors[1]
   };
   this.images = [];
   this.keysDown = [];
@@ -47,7 +47,7 @@ function App() {
     ['mousedown', 'mouseup', 'mouseout', 'mousemove'].forEach(evt => this.canvas.addEventListener(evt, this.handleLocalEvents));
 
     // touch event listeners
-    // ['touchstart', 'touchmove', 'touchcancel', 'touchend', 'touchcancel'].forEach(evt => this.canvas.addEventListener(evt, this.touchEventHandler, { passive: true }));
+    ['touchstart', 'touchmove', 'touchcancel', 'touchend', 'touchcancel'].forEach(evt => this.canvas.addEventListener(evt, this.touchEventHandler, { passive: true }));
 
     // key event listeners
     ['keydown', 'keyup'].forEach(ev => window.addEventListener(ev, this.handleKeyEvents));
@@ -165,7 +165,7 @@ function App() {
     const grabButtonClass = this.moveImages ? 'active' : '';
     const grabButton = createElement('button', { id: 'move', text: 'Move', classes: [grabButtonClass] });
 
-    const webcamButton = createElement('button', { id: 'webcam', text: '8==>' });
+    const webcamButton = createElement('button', { id: 'webcam', text: 'Take Photo' });
 
     toolbar.appendChild(lineWidthContainer);
     toolbar.appendChild(colors);
@@ -301,8 +301,6 @@ function App() {
     this.drawLine(data.x0 * w, data.y0 * h, data.x1 * w, data.y1 * h, data.color, data.size);
   }
   this.onResize = () => {
-    // this.canvas.width = window.innerWidth;
-    // this.canvas.height = window.innerHeight;
     const toolbarHeight = this.toolbar.offsetHeight;
     const footerHeight = this.footer.offsetHeight;
     const canvasHeight = window.innerHeight - (toolbarHeight + footerHeight);
@@ -363,6 +361,7 @@ function App() {
     const cancelButton = document.querySelector('button#cancel-snapshot');
     takeSnapshotButton.addEventListener('click', (e) => {
       this.takeWebcamSnapshot(videoElement);
+      webcamWrapper.removeChild(videoElement);
       this.toggleContainerVisibility(webcamContainer);
       stream.getVideoTracks().forEach(track => track.stop());
     });
@@ -376,10 +375,19 @@ function App() {
     const tmpContext = tmpCanvas.getContext('2d');
     tmpContext.drawImage(video, 0, 0, tmpCanvas.width, tmpCanvas.height);
     tmpCanvas.toBlob((blob) => {
-      const snapshot = new CanvasImage(blob, this.ctx, this.images.length + 1);
-      this.image = snapshot;
-      this.images.push(this.image);
-      this.image.image.addEventListener('load', () => this.image.display());
+      const formData = new FormData();
+      const file = new File([blob], 'snapshot.jpeg', { type: blob.type });
+      formData.append('image', file);
+      fetch('/api/image', {
+          method: 'POST',
+          body: formData
+        })
+        .then(res => res.json())
+        .then(res => {
+          this.fetchImage(res.id);
+          this.socket.emit('image:fetch', { id: res.id });
+        })
+        .catch(err => console.log(err));
     });
   }
   this.displayUploadForm = () => {

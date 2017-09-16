@@ -22,6 +22,10 @@ function loadCollection(collectionName, db) {
   });
 }
 
+function generateUUID() {
+  return Math.random().toString(16).slice(2, 10);
+}
+
 const filter = {
   images(req, file, cb) {
     if (!file.originalname.match(/\.(jpg|jpeg|png|gif)$/)) {
@@ -31,4 +35,9 @@ const filter = {
   }
 }
 
-module.exports = { loadCollection, filter, cleanDirectory };
+module.exports = {
+  loadCollection,
+  filter,
+  cleanDirectory,
+  generateUUID
+};
