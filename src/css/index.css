@@ -35,7 +35,7 @@ canvas {
 }
 
 canvas.moving {
-  cursor: url(../imgs/testicles.png) 0 0, auto;
+  cursor: url(../imgs/testicles.png) 25 10, auto;
 }
 
 a {
