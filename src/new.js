@@ -1,7 +1,6 @@
 const io = require('socket.io-client');
 const CanvasImage = require('./image');
 const { getMousePos, createElement } = require('./utils');
-const { getWebcamStream } = require('./webcam');
 const colors = require('./colors');
 
 
@@ -106,6 +105,7 @@ function App() {
   this.toggleState = () => {
     this.moveImages = !this.moveImages;
     this.moveButton.classList.toggle('active');
+    this.canvas.classList.toggle('moving');
     this.images.forEach(img => img.selected = false);
     if (!this.moveImages) {
       this.displayImages();
@@ -121,7 +121,7 @@ function App() {
     this.ctx.lineCap = 'round';
   }
   this.createDOM = () => {
-    const canvas = createElement('canvas', { classes: ['whiteboard'] });
+    const canvas = createElement('canvas', { classes: ['whiteboard', 'moving'] });
     const toolbar = createElement('div', { classes: ['toolbar'] });
     const lineWidthContainer = createElement('div', { classes: ['line-width-container'] });
     const lineWidthRange = createElement('input', {
@@ -348,24 +348,26 @@ function App() {
   this.toggleContainerVisibility = (container) => {
     container.classList.toggle('hidden');
   }
-  this.displayWebcamModal = async() => {
+  this.displayWebcamModal = () => {
     const webcamContainer = document.querySelector('.webcam-container');
     const webcamWrapper = webcamContainer.querySelector('.webcam-wrapper');
     this.toggleContainerVisibility(webcamContainer);
     const videoElement = createElement('video');
-    const stream = await getWebcamStream();
-    videoElement.srcObject = stream;
-    videoElement.play();
-    webcamWrapper.prepend(videoElement);
-    const takeSnapshotButton = document.querySelector('button#take-snapshot');
-    const cancelButton = document.querySelector('button#cancel-snapshot');
-    takeSnapshotButton.addEventListener('click', (e) => {
-      this.takeWebcamSnapshot(videoElement);
-      webcamWrapper.removeChild(videoElement);
-      this.toggleContainerVisibility(webcamContainer);
-      stream.getVideoTracks().forEach(track => track.stop());
-    });
-    cancelButton.addEventListener('click', () => this.toggleContainerVisibility('.webcam-container'));
+    navigator.mediaDevices.getUserMedia({ video: true, audio: false })
+      .then(stream => {
+        videoElement.srcObject = stream;
+        videoElement.play();
+        webcamWrapper.prepend(videoElement);
+        const takeSnapshotButton = document.querySelector('button#take-snapshot');
+        const cancelButton = document.querySelector('button#cancel-snapshot');
+        takeSnapshotButton.addEventListener('click', (e) => {
+          this.takeWebcamSnapshot(videoElement);
+          webcamWrapper.removeChild(videoElement);
+          this.toggleContainerVisibility(webcamContainer);
+          stream.getVideoTracks().forEach(track => track.stop());
+        });
+        cancelButton.addEventListener('click', () => this.toggleContainerVisibility('.webcam-container'));
+      });
   }
   this.takeWebcamSnapshot = (video) => {
     const { videoWidth, videoHeight } = video;

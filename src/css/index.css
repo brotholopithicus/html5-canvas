@@ -34,6 +34,10 @@ canvas {
   cursor: url(../imgs/paintbrush.png) 0 0, auto;
 }
 
+canvas.moving {
+  cursor: url(../imgs/testicles.png) 0 0, auto;
+}
+
 a {
   background-color: #3d3d3d;
   text-decoration: none;
@@ -398,22 +402,20 @@ input[type=range]::-webkit-slider-thumb {
   border-radius: 0.3rem;
 }
 
-.webcam-container-buttons {
-  margin-top: 1rem;
-  display: flex;
-  flex-direction: row;
-}
-
-.webcam-container-buttons button {
-  flex: 1;
-}
-
 .webcam-wrapper {
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  justify-content: flex-end;
   align-items: center;
   padding: 1rem;
+  min-width: 672px;
+  min-height: 568px;
+}
+
+.webcam-wrapper video {
+  flex: 1;
+  width: 100%;
+  background-color: rgba(0, 0, 0, 0.25);
 }
 
 .upload-wrapper button {
@@ -427,4 +429,33 @@ input[type=range]::-webkit-slider-thumb {
 
 .hidden {
   display: none;
+}
+
+button#take-snapshot {
+  background-color: #268c20;
+  flex: 2;
+}
+
+button#cancel-snapshot {
+  background-color: #df0404;
+  flex: 1;
+}
+
+.webcam-container-buttons {
+  margin-top: 1rem;
+  display: flex;
+  flex-direction: row;
+  width: 100%;
+  justify-content: space-between;
+}
+
+.webcam-container-buttons button {
+  font-size: 1.5rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.1rem;
+  border: 1px solid transparent;
+}
+
+.webcam-container-buttons button:not(:last-child) {
+  margin-right: 1rem;
 }

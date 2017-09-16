@@ -42,9 +42,9 @@ function Chat() {
             this.setUsername();
           }
         }
-        if (this.username && event.keyCode === 27) {
-          this.onChatToggle();
-        }
+      }
+      if (this.username && event.keyCode === 27) {
+        this.onChatToggle();
       }
     });
     this.usernameInput.value = localStorage.getItem('username') ?
