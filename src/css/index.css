@@ -21,6 +21,7 @@ body {
   flex-direction: column;
   height: 100vh;
   width: 100vw;
+  background-color: #222;
 }
 
 ul {
@@ -85,7 +86,7 @@ button:hover {
 }
 
 .toolbar {
-  flex: 0 1 40px;
+  flex: 0 1 60px;
   width: 100%;
   display: flex;
   flex-direction: row;
@@ -125,14 +126,12 @@ input.line-width {
 .colors {
   display: flex;
   flex-direction: row;
-  flex: 1;
+  flex: 0 1 75vw;
 }
 
 .color {
-  flex: 1;
+  flex: 1 0 auto;
   cursor: pointer;
-  height: 100%;
-  box-shadow: 0px 0px 1px 0px rgba(0, 0, 0, 0.5);
   transition: transform 0.2s;
 }
 
@@ -148,15 +147,23 @@ button#move.active {
   background-color: #693434;
 }
 
-button#download {
-  border-right: 1px solid #373737;
-}
-
-button#upload, button#download {
+button#eraser {
   background-color: #292929;
 }
 
-button#download:hover, button#upload:hover {
+button#eraser.active {
+  background-color: #693434;
+}
+
+button#download, button#webcam {
+  border-right: 1px solid #373737;
+}
+
+button#upload, button#download, button#webcam {
+  background-color: #292929;
+}
+
+button#download:hover, button#upload:hover, button#webcam:hover {
   background-color: #555555;
 }
 
@@ -183,7 +190,7 @@ footer {
 }
 
 button#chatToggle {
-  flex: 1 1 auto;
+  flex: 1;
   background-color: #373737;
 }
 
@@ -332,7 +339,6 @@ button#chatToggle:disabled:hover {
 }
 
 button.participants {
-  flex: 0 1 15%;
   background-color: rgb(22, 90, 221);
 }
 

@@ -6,12 +6,12 @@ const colors = require('./colors');
 
 function App() {
   this.config = {
-    colors: colors[1]
+    colors: colors[0]
   };
   this.images = [];
   this.canvasHistory = [];
   this.moveImages = true;
-  this.drawMode = 'source-over';
+  this.drawMode = 'draw';
 
   this.initialize = (element) => {
     this.current = { x: 0, y: 0, color: this.config.colors[0], size: 25 };
@@ -19,13 +19,11 @@ function App() {
     const {
       canvas,
       toolbar,
-      webcamButton,
       eraserButton
     } = this.createDOM();
 
     this.toolbar = toolbar;
     this.footer = document.querySelector('footer');
-    this.webcamButton = webcamButton;
     this.eraserButton = eraserButton;
 
     this.element = element;
@@ -41,6 +39,7 @@ function App() {
     this.uploadButton = document.querySelector('button#upload');
     this.downloadButton = document.querySelector('button#download');
     this.moveButton = document.querySelector('button#move');
+    this.webcamButton = document.querySelector('button#webcam');
 
     this.ctx = this.canvas.getContext('2d');
 
@@ -76,7 +75,9 @@ function App() {
   }
 
   this.toggleDrawMode = () => {
-    this.drawMode = this.drawMode === 'source-over' ? 'destination-out' : 'source-over';
+    if (this.moveImages) return;
+    this.eraserButton.classList.toggle('active');
+    this.drawMode = this.drawMode === 'draw' ? 'erase' : 'draw';
   }
 
   this.addSocketListeners = () => {
@@ -182,21 +183,17 @@ function App() {
     const grabButtonClass = this.moveImages ? 'active' : '';
     const grabButton = createElement('button', { id: 'move', text: 'Move', classes: [grabButtonClass] });
 
-    const webcamButton = createElement('button', { id: 'webcam', text: 'Take Photo' });
-
     const eraserButton = createElement('button', { id: 'eraser', text: 'Eraser' });
 
     toolbar.appendChild(lineWidthContainer);
     toolbar.appendChild(colors);
     toolbar.appendChild(eraserButton);
-    toolbar.appendChild(webcamButton);
     toolbar.appendChild(grabButton);
     toolbar.appendChild(clearButton);
 
     return {
       canvas,
       toolbar,
-      webcamButton,
       eraserButton
     }
   }
@@ -277,17 +274,16 @@ function App() {
   this.getMousePos = (e) => getMousePos(this.canvas, e)
 
 
-  this.drawLine = (x0, y0, x1, y1, color, size, emit) => {
+  this.drawLine = (x0, y0, x1, y1, color, size, mode = 'draw', emit = false) => {
     this.ctx.beginPath();
     this.ctx.lineCap = 'round';
     this.ctx.lineJoin = 'round';
     this.ctx.lineWidth = size;
-    this.ctx.strokeStyle = color;
+    this.ctx.strokeStyle = mode === 'erase' ? '#222' : color;
     this.ctx.moveTo(x0, y0);
     this.ctx.lineTo(x1, y1);
     this.ctx.stroke();
     this.ctx.closePath();
-
     if (!emit) return;
     const { w, h } = this.getCanvasDimensions();
     this.socket.emit('drawing', {
@@ -296,8 +292,10 @@ function App() {
       x1: x1 / w,
       y1: y1 / h,
       color,
-      size
+      size,
+      mode
     });
+
   }
 
 
@@ -317,18 +315,18 @@ function App() {
         this.drawing = true;
         this.current.x = coords.x;
         this.current.y = coords.y;
-        this.drawLine(this.current.x, this.current.y, this.current.x, this.current.y, this.current.color, this.current.size, true);
+        this.drawLine(this.current.x, this.current.y, this.current.x, this.current.y, this.current.color, this.current.size, this.drawMode, true);
         break;
       case 'mousemove':
         if (!this.drawing) return;
-        this.drawLine(this.current.x, this.current.y, coords.x, coords.y, this.current.color, this.current.size, true);
+        this.drawLine(this.current.x, this.current.y, coords.x, coords.y, this.current.color, this.current.size, this.drawMode, true);
         this.current.x = coords.x;
         this.current.y = coords.y;
         break;
       default: // mouseup and mouseout
         if (!this.drawing) return;
         this.drawing = false;
-        this.drawLine(this.current.x, this.current.y, coords.x, coords.y, this.current.color, this.current.size, true);
+        this.drawLine(this.current.x, this.current.y, coords.x, coords.y, this.current.color, this.current.size, this.drawMode, true);
         break;
     }
   }
@@ -352,18 +350,18 @@ function App() {
         this.drawing = true;
         this.current.x = coords.x;
         this.current.y = coords.y;
-        this.drawLine(this.current.x, this.current.y, this.current.x, this.current.y, this.current.color, this.current.size, true);
+        this.drawLine(this.current.x, this.current.y, this.current.x, this.current.y, this.current.color, this.current.size, this.drawMode, true);
         break;
       case 'touchmove':
         if (!this.drawing) return;
-        this.drawLine(this.current.x, this.current.y, coords.x, coords.y, this.current.color, this.current.size, true);
+        this.drawLine(this.current.x, this.current.y, coords.x, coords.y, this.current.color, this.current.size, this.drawMode, true);
         this.current.x = coords.x;
         this.current.y = coords.y;
         break;
       default:
         if (!this.drawing) return;
         this.drawing = false;
-        this.drawLine(this.current.x, this.current.y, coords.x, coords.y, this.current.color, this.current.size, true);
+        this.drawLine(this.current.x, this.current.y, coords.x, coords.y, this.current.color, this.current.size, this.drawMode, true);
         break;
     }
   }
@@ -371,7 +369,7 @@ function App() {
 
   this.onDrawingEvent = (data) => {
     const { w, h } = this.getCanvasDimensions();
-    this.drawLine(data.x0 * w, data.y0 * h, data.x1 * w, data.y1 * h, data.color, data.size);
+    this.drawLine(data.x0 * w, data.y0 * h, data.x1 * w, data.y1 * h, data.color, data.size, data.mode);
   }
 
 
