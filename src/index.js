@@ -1,4 +1,5 @@
 require('./css/index.css');
+require('regenerator-runtime/runtime');
 
 const App = require('./new');
 const Chat = require('./chat');

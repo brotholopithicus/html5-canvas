@@ -26,10 +26,8 @@ let numUsers = 0;
 
 io.on('connection', (socket) => {
   // canvas
-  socket.emit('image:history', imageHistory);
-
   socket.on('resize', () => {
-    socket.emit('history', canvasHistory);
+    socket.emit('history', { canvasHistory, imageHistory });
   });
 
   socket.on('drawing', (data) => {
@@ -43,18 +41,17 @@ io.on('connection', (socket) => {
     io.emit('clear');
   });
 
-  socket.on('history:fetch', () => {
-    socket.emit('history', canvasHistory);
+  socket.on('canvas:history', () => {
+    socket.emit('canvas:history', canvasHistory);
   });
 
-  socket.on('history:clear', () => {
-    canvasHistory = [];
-    io.emit('clear:history');
+  socket.on('canvas:cache', () => {
+    io.emit('canvas:cache', canvasHistory);
   });
 
   socket.on('image:fetch', ({ id }) => {
     imageHistory.push({ id });
-    socket.broadcast.emit('image:fetch', ({ id }));
+    io.emit('image:fetch', ({ id }));
   });
 
   socket.on('image:update', ({ image }) => {
@@ -67,6 +64,12 @@ io.on('connection', (socket) => {
       imageHistory.push(image);
     }
     socket.broadcast.emit('image:update', { image });
+  });
+
+  socket.on('image:delete', ({ id }) => {
+    const index = imageHistory.find(img => img.id === id);
+    imageHistory.splice(index, 1);
+    io.emit('image:delete', { id });
   });
 
   // chat

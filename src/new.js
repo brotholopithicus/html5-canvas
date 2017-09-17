@@ -9,20 +9,24 @@ function App() {
     colors: colors[1]
   };
   this.images = [];
-  this.keysDown = [];
+  this.canvasHistory = [];
   this.moveImages = true;
+  this.drawMode = 'source-over';
+
   this.initialize = (element) => {
     this.current = { x: 0, y: 0, color: this.config.colors[0], size: 25 };
 
     const {
       canvas,
       toolbar,
-      webcamButton
+      webcamButton,
+      eraserButton
     } = this.createDOM();
 
     this.toolbar = toolbar;
     this.footer = document.querySelector('footer');
     this.webcamButton = webcamButton;
+    this.eraserButton = eraserButton;
 
     this.element = element;
     this.element.appendChild(toolbar);
@@ -62,6 +66,7 @@ function App() {
     this.downloadButton.addEventListener('click', this.downloadEventHandler);
     this.moveButton.addEventListener('click', this.toggleState);
     this.webcamButton.addEventListener('click', this.displayWebcamModal);
+    this.eraserButton.addEventListener('click', this.toggleDrawMode);
 
     this.addSocketListeners();
 
@@ -69,39 +74,47 @@ function App() {
 
     this.onResize();
   }
+
+  this.toggleDrawMode = () => {
+    this.drawMode = this.drawMode === 'source-over' ? 'destination-out' : 'source-over';
+  }
+
   this.addSocketListeners = () => {
     this.socket.on('drawing', this.onDrawingEvent);
-    this.socket.on('history', this.onCanvasHistory);
+    this.socket.on('history', this.onAllHistory);
+    this.socket.on('canvas:history', this.onCanvasHistory);
+    this.socket.on('canvas:cache', this.cacheCanvasHistory);
     this.socket.on('clear', this.clearCanvas);
-    this.socket.on('image:fetch', ({ id }) => this.fetchImage(id));
-    this.socket.on('image:history', this.handleImageHistory);
+    this.socket.on('image:fetch', this.fetchImage);
     this.socket.on('image:update', ({ image }) => this.updateImage(image));
+    this.socket.on('image:delete', this.handleImageDelete);
   }
-  this.handleImageHistory = (imageHistory) => {
-    imageHistory.forEach(imageData => {
-      const { id, x, y, width, height } = imageData;
-      fetch(`/api/images/${id}`)
-        .then(res => res.blob())
-        .then(img => {
-          const canvasImg = new CanvasImage(img, this.ctx, id);
-          canvasImg.image.addEventListener('load', () => canvasImg.display());
-          canvasImg.x = x;
-          canvasImg.y = y;
-          canvasImg.width = width;
-          canvasImg.height = height;
-          this.images.push(canvasImg);
-        });
-    });
-    this.displayImages();
+
+
+  this.fetchImage = ({ id }) => {
+    fetch(`/api/images/${id}`)
+      .then(res => res.blob())
+      .then(img => {
+        const canvasImg = new CanvasImage(img, this.ctx, id);
+        canvasImg.image.addEventListener('load', () => canvasImg.display());
+        this.images.push(canvasImg);
+      });
   }
-  this.updateImage = (imageData) => {
-    const image = this.images.find(img => img.id === imageData.id);
-    for (let key in imageData) {
-      image[key] = imageData[key];
-    }
-    this.displayImages();
+
+  this.updateImage = (data) => {
+    const { w, h } = this.getCanvasDimensions();
+    const image = this.images.find(img => img.id === data.id);
+    image.x = data.x * w;
+    image.y = data.y * h;
+    image.width = data.width * w;
+    image.height = data.height * h;
+    this.displayImages(false);
   }
+
+
   this.getCanvasDimensions = () => ({ w: this.canvas.width, h: this.canvas.height })
+
+
   this.toggleState = () => {
     this.moveImages = !this.moveImages;
     this.moveButton.classList.toggle('active');
@@ -111,6 +124,8 @@ function App() {
       this.displayImages();
     }
   }
+
+
   this.setStyles = () => {
     this.ctx.fillStyle = '#222';
     this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
@@ -120,6 +135,8 @@ function App() {
     this.ctx.lineJoin = 'round';
     this.ctx.lineCap = 'round';
   }
+
+
   this.createDOM = () => {
     const canvas = createElement('canvas', { classes: ['whiteboard', 'moving'] });
     const toolbar = createElement('div', { classes: ['toolbar'] });
@@ -167,8 +184,11 @@ function App() {
 
     const webcamButton = createElement('button', { id: 'webcam', text: 'Take Photo' });
 
+    const eraserButton = createElement('button', { id: 'eraser', text: 'Eraser' });
+
     toolbar.appendChild(lineWidthContainer);
     toolbar.appendChild(colors);
+    toolbar.appendChild(eraserButton);
     toolbar.appendChild(webcamButton);
     toolbar.appendChild(grabButton);
     toolbar.appendChild(clearButton);
@@ -176,9 +196,12 @@ function App() {
     return {
       canvas,
       toolbar,
-      webcamButton
+      webcamButton,
+      eraserButton
     }
   }
+
+
   this.downloadEventHandler = (event) => {
     const a = document.createElement('a');
     a.href = this.canvas.toDataURL();
@@ -186,34 +209,74 @@ function App() {
     const evt = new MouseEvent('click');
     a.dispatchEvent(evt);
   }
+
+
   this.updateLineWidth = (event) => {
     let size = event.target.value;
     this.lineWidthDisplay.style.width = size + 'px';
     this.lineWidthDisplay.style.height = size + 'px';
     this.current.size = size;
   }
+
+
   this.clearEventHandler = () => {
     this.clearCanvas(true);
   }
+
+
   this.clearCanvas = (emit = false) => {
     this.images = [];
+    this.canvasHistory = [];
     this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
     if (emit) {
       this.socket.emit('clear');
     }
   }
-  this.onCanvasHistory = (history) => {
-    history.forEach(item => {
-      this.onDrawingEvent(item);
-    });
+
+  this.onAllHistory = ({ canvasHistory, imageHistory }) => {
+    this.onImageHistory(imageHistory)
+      .then(() => {
+        this.canvasHistory = canvasHistory;
+        this.onCanvasHistory();
+      });
   }
+
+  this.onCanvasHistory = () => {
+    this.canvasHistory.forEach(item => this.onDrawingEvent(item));
+  }
+
+  this.onImageHistory = (images) => {
+    return Promise.all(
+      images.map(
+        async(data) => {
+          const { x, y, width, height, id } = data;
+          const res = await fetch(`/api/images/${id}`).then(res => res.blob());
+          const image = new CanvasImage(res, this.ctx, id);
+          image.image.addEventListener('load', () => {
+            this.updateImage(data);
+          });
+          this.images.push(image);
+        }
+      )
+    );
+  }
+
+
+  this.cacheCanvasHistory = (history) => {
+    this.canvasHistory = history;
+  }
+
   this.updateColor = (e) => {
     document.querySelector('.color.active').classList.remove('active');
     e.target.classList.add('active');
     this.current.color = e.target.dataset.color;
     this.lineWidthDisplay.style.backgroundColor = e.target.dataset.color;
   }
+
+
   this.getMousePos = (e) => getMousePos(this.canvas, e)
+
+
   this.drawLine = (x0, y0, x1, y1, color, size, emit) => {
     this.ctx.beginPath();
     this.ctx.lineCap = 'round';
@@ -236,13 +299,17 @@ function App() {
       size
     });
   }
+
+
   this.handleLocalEvents = (e) => {
     if (this.moveImages) {
-      this.handleKeysDownMouseEvent(e);
+      this.handleMoveImagesMouseEvent(e);
     } else {
       this.mouseEventHandler(e);
     }
   }
+
+
   this.mouseEventHandler = (e) => {
     const coords = this.getMousePos(e);
     switch (e.type) {
@@ -265,6 +332,8 @@ function App() {
         break;
     }
   }
+
+
   this.getTouchPos = (touch) => {
     const rect = this.canvas.getBoundingClientRect();
     return {
@@ -272,6 +341,8 @@ function App() {
       y: touch.clientY - rect.top
     }
   }
+
+
   this.touchEventHandler = (e) => {
     e.preventDefault();
     if (e.targetTouches.length !== 1) return;
@@ -296,10 +367,14 @@ function App() {
         break;
     }
   }
+
+
   this.onDrawingEvent = (data) => {
     const { w, h } = this.getCanvasDimensions();
     this.drawLine(data.x0 * w, data.y0 * h, data.x1 * w, data.y1 * h, data.color, data.size);
   }
+
+
   this.onResize = () => {
     const toolbarHeight = this.toolbar.offsetHeight;
     const footerHeight = this.footer.offsetHeight;
@@ -310,6 +385,8 @@ function App() {
     this.setStyles();
     this.socket.emit('resize');
   }
+
+
   this.throttle = (callback, delay) => {
     let previousCall = new Date().getTime();
     return function() {
@@ -320,34 +397,28 @@ function App() {
       }
     }
   }
-  this.fetchImage = (id) => {
-    const matchingImage = this.images.find(img => img.id === id);
-    if (!matchingImage) {
-      fetch(`/api/images/${id}`)
-        .then(res => res.blob())
-        .then(img => {
-          const canvasImg = new CanvasImage(img, this.ctx, id);
-          canvasImg.image.addEventListener('load', () => canvasImg.display());
-          this.images.push(canvasImg);
-          this.socket.emit('image:fetch', { id });
-        });
-    }
-  }
-  this.displayImage = () => {
-    this.socket.emit('image:display', ({ image: this.image }));
-  }
+
+
   this.handleKeyEvents = (e) => {
-    if (e.type === 'keydown') {
-      if (!this.keysDown.includes(e.keyCode)) this.keysDown.push(e.keyCode);
-    } else if (e.type === 'keyup') {
-      this.keysDown.splice(this.keysDown.indexOf(e.keyCode), 1);
-    } else {
-      console.log(e);
+    if (e.type === 'keydown' && e.keyCode === 46) {
+      const image = this.images.find(image => image.selected);
+      if (image) {
+        this.socket.emit('image:delete', { id: image.id });
+      }
     }
   }
+
+  this.handleImageDelete = ({ id }) => {
+    const index = this.images.findIndex(img => img.id === id);
+    this.images.splice(index, 1);
+    this.displayImages(false);
+  }
+
   this.toggleContainerVisibility = (container) => {
     container.classList.toggle('hidden');
   }
+
+
   this.displayWebcamModal = () => {
     const webcamContainer = document.querySelector('.webcam-container');
     const webcamWrapper = webcamContainer.querySelector('.webcam-wrapper');
@@ -369,6 +440,8 @@ function App() {
         cancelButton.addEventListener('click', () => this.toggleContainerVisibility('.webcam-container'));
       });
   }
+
+
   this.takeWebcamSnapshot = (video) => {
     const { videoWidth, videoHeight } = video;
     const tmpCanvas = createElement('canvas');
@@ -386,12 +459,13 @@ function App() {
         })
         .then(res => res.json())
         .then(res => {
-          this.fetchImage(res.id);
           this.socket.emit('image:fetch', { id: res.id });
         })
         .catch(err => console.log(err));
     });
   }
+
+
   this.displayUploadForm = () => {
     this.toggleUploadContainerVisibility();
     const submitButton = document.querySelector('input#upload');
@@ -399,6 +473,8 @@ function App() {
     const cancelButton = document.querySelector('button#cancel-upload');
     cancelButton.addEventListener('click', (e) => this.cancelUpload());
   }
+
+
   this.handleUpload = (e) => {
     e.preventDefault();
     const formData = new FormData(document.querySelector('form#upload-form'));
@@ -409,18 +485,23 @@ function App() {
       .then(res => res.json())
       .then(res => {
         this.toggleUploadContainerVisibility();
-        this.fetchImage(res.id);
         this.socket.emit('image:fetch', { id: res.id });
       })
       .catch(err => console.log(err));
   }
+
+
   this.toggleUploadContainerVisibility = () => {
     const uploadContainer = document.querySelector('.upload-container');
     uploadContainer.classList.toggle('hidden');
   }
+
+
   this.cancelUpload = () => {
     this.toggleUploadContainerVisibility();
   }
+
+
   this.imageUnderMouse = (x, y) => {
     return this.images.find(img =>
       x >= img.x - img.anchorRadius &&
@@ -429,10 +510,27 @@ function App() {
       y <= img.y + img.height + img.anchorRadius
     );
   }
-  this.displayImages = () => {
+
+
+  this.displayImages = (emit = false) => {
     this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
     this.images.forEach(img => img.display(this.ctx));
+    if (emit) {
+      const { id, x, y, width, height } = this.image;
+      const { w, h } = this.getCanvasDimensions();
+      const image = {
+        id,
+        x: x / w,
+        y: y / h,
+        width: width / w,
+        height: height / h
+      };
+      this.socket.emit('image:update', { image });
+    }
+    this.onCanvasHistory();
   }
+
+
   this.imageAnchorHitTest = (image, x, y) => {
     if (typeof image !== 'undefined') {
       const anchors = image.anchors.map(a => Object.assign({}, a));
@@ -446,7 +544,9 @@ function App() {
       return;
     }
   }
-  this.handleKeysDownMouseEvent = (e) => {
+
+
+  this.handleMoveImagesMouseEvent = (e) => {
     const { x, y } = this.getMousePos(e);
     switch (e.type) {
       case 'mousedown':
@@ -455,6 +555,9 @@ function App() {
         this.isMoving = this.anchorHit < 0 && typeof this.image !== 'undefined';
         this.images.forEach(img => img.selected = img === this.image);
         this.start = { x, y };
+        const emit = typeof this.image !== 'undefined';
+        this.displayImages(emit);
+        this.socket.emit('canvas:cache');
         break;
       case 'mousemove':
         if (this.image) {
@@ -463,6 +566,7 @@ function App() {
             const dy = y - this.start.y;
             this.image.x += dx;
             this.image.y += dy;
+            this.displayImages(true);
           } else if (this.anchorHit > -1) {
             const imageRight = this.image.x + this.image.width;
             const imageBottom = this.image.y + this.image.height;
@@ -490,6 +594,7 @@ function App() {
               default:
                 break;
             }
+            this.displayImages(true);
           }
           this.start = { x, y };
         }
@@ -497,16 +602,9 @@ function App() {
       default:
         this.isMoving = false;
         this.anchorHit = -1;
-        this.image = null;
+        this.image = undefined;
         break;
     }
-    if (this.image) this.handleImageUpdate();
-    this.displayImages();
-  }
-  this.handleImageUpdate = () => {
-    const { id, x, y, width, height } = this.image;
-    const image = { id, x, y, width, height };
-    this.socket.emit('image:update', { image });
   }
 }
 
